@@ -82,7 +82,7 @@ public class ParseNestedTree {
                 }
                 nodeStartColNo = nodeWidth * depth;
             }
-            treeNodes.forEach(System.out::println);
+//            treeNodes.forEach(System.out::println);
 
             // 4.2 遍历节点，建立父子关系
             for (int depth = 1; depth <= treeDepth; depth++) {
@@ -129,11 +129,15 @@ public class ParseNestedTree {
                 }
             }
 
+            for (TreeNode parentTreeNode : parentTreeNodes) {
+                recursion(parentTreeNode);
+            }
+
 
 
             // 5. 生成二维表
 
-            System.out.println(parentTreeNodes);
+//            System.out.println(parentTreeNodes);
         } catch (IOException e) {
             e.printStackTrace();
             return Result.error(1, "解析失败！");
@@ -141,10 +145,12 @@ public class ParseNestedTree {
         return Result.OK();
     }
 
-
-
-
-
+    public static void recursion(TreeNode root) {
+        System.out.println(root.getOrd() + "--" + root.getExpenseType());
+        for (TreeNode treeNode : root.getChildren()) {
+            recursion(treeNode);
+        }
+    }
 
 
 
