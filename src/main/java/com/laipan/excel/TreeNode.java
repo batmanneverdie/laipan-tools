@@ -15,10 +15,15 @@ import java.util.List;
 public class TreeNode {
 
     private TreeNode parent;
+    private int depth;
     private int lft;
     private int rgt;
     private int rowNo;
     private int startCol;
+
+    private int childNodeNum;
+    private int ord;
+    private String expenseType;
     private List<NodeRecord> records;
-    private TreeNode child;
+    private List<TreeNode> children;
 }

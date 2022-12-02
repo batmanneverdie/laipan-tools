@@ -14,10 +14,8 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/tools/excel")
@@ -50,7 +48,7 @@ public class ParseNestedTree {
         List<MultipartFile> upfiles = multiFileMap.get("file");
         MultipartFile       file    = upfiles.get(0);
 
-        ArrayList<TreeNode> treeNodes = new ArrayList<>();
+        List<TreeNode> treeNodes = new LinkedList<TreeNode>();
         try {
             // 4. 解析 excel
             Sheet sheet = ExcelFactory.createSheet(file.getOriginalFilename(), file.getInputStream(), sheetIndex);
@@ -64,21 +62,17 @@ public class ParseNestedTree {
                     // 4.1.1.1 遍历每一行此时层级的数据
                     if (getCellValueByCell(row.getCell(nodeStartColNo)) != null) {
                         TreeNode treeNode = new TreeNode();
-                        treeNode.setRowNo(rowNo);
+                        treeNode.setDepth(depth);
                         treeNode.setStartCol(nodeStartColNo);
+                        treeNode.setRowNo(rowNo);
 
-                        ArrayList<NodeRecord> nodeRecords = new ArrayList<>();
-                        NodeRecord nodeRecord = new NodeRecord();
-                        nodeRecords.add(nodeRecord);
-
-                        treeNode.setRecords(nodeRecords);
                         int loopCount = 0;
                         for (int colNo = nodeStartColNo; colNo <= nodeWidth * depth; colNo++) {
                             if (loopCount == 1) {
-                                nodeRecord.setOrd(Integer.parseInt(getCellValueByCell(row.getCell(colNo))));
+                                treeNode.setOrd(Integer.parseInt(getCellValueByCell(row.getCell(colNo))));
                             }
                             if (loopCount == 2) {
-                                nodeRecord.setExpenseType(getCellValueByCell(row.getCell(colNo)));
+                                treeNode.setExpenseType(getCellValueByCell(row.getCell(colNo)));
                             }
                             loopCount++;
                         }
@@ -90,37 +84,70 @@ public class ParseNestedTree {
             }
             treeNodes.forEach(System.out::println);
 
+            // 4.2 遍历节点，建立父子关系
+            for (int depth = 1; depth <= treeDepth; depth++) {
+                for (TreeNode treeNode : treeNodes) {
+                    if (treeNode.getDepth() == depth) {
+                        // 计算子节点的起止行
+                        // treeNode.getRowNo() <= rowNo < 与 treeNode 同一列的下一个节点的 NextTreeNode.getRowNo()
+                        int nodeEndRowNo = endRow;
+                        for (TreeNode node : treeNodes) {
+                            if (node.getStartCol() == treeNode.getStartCol() && node.getRowNo() > treeNode.getRowNo()) {
+                                nodeEndRowNo = node.getRowNo();
+                                break;
+                            }
+                        }
+                        // 获取子节点
+                        LinkedList<TreeNode> children = new LinkedList<>();
+                        for (TreeNode node : treeNodes) {
+                            if (node.getDepth() - 1 == depth
+                                    && node.getRowNo() >= treeNode.getRowNo()
+                                    && node.getRowNo() < nodeEndRowNo
+                            ) {
+                                children.add(node);
+                            }
+                        }
+                        // 计算子节点的个数
+                        int childNodeNum = 0;
+                        for (TreeNode node : treeNodes) {
+                            if (node.getDepth() > depth
+                                    && node.getRowNo() >= treeNode.getRowNo()
+                                    && node.getRowNo() < nodeEndRowNo) {
+                                childNodeNum++;
+                            }
+                        }
+                        treeNode.setChildNodeNum(childNodeNum);
+                        treeNode.setChildren(children);
+                    }
+                }
+            }
+
+            LinkedList<TreeNode> parentTreeNodes = new LinkedList<>();
+            for (TreeNode treeNode : treeNodes) {
+                if (treeNode.getStartCol() == 0) {
+                    parentTreeNodes.add(treeNode);
+                }
+            }
 
 
-            //                    // 4.1.1.1.1 判断此节点是否直接挂附加信息列
-//                    boolean existAdditionalInfo = false;
-//                    int additionalInfoRowNum = 0;
-//                    for (int colNo2 = nodeStartColNo; colNo2 <= additionInfoStartCol; colNo2++) {
-//                        if (getCellValueByCell(row.getCell(colNo2)) == null) {
-//                            existAdditionalInfo = true;
-//                        }
-//                        // 一个费用类型下可挂多个科目，需要判断下面几行的科目是否也属于此费用类型
-//                        additionalInfoRowNum++;
-//                        break;
-//                    }
-//                    if (existAdditionalInfo) {
-//                        // 存在附加信息
-//                        System.out.print("exist additional info: ");
-//                        // 获取附加信息
-//                        for (int colNo3 = additionInfoStartCol; colNo3 <= additionInfoEndCol; colNo3++) {
-//                            System.out.print(getCellValueByCell(row.getCell(colNo3)) + "---");
-//                        }
-//                        System.out.println();
-//                    }
 
             // 5. 生成二维表
 
+            System.out.println(parentTreeNodes);
         } catch (IOException e) {
             e.printStackTrace();
             return Result.error(1, "解析失败！");
         }
         return Result.OK();
     }
+
+
+
+
+
+
+
+
 
     //获取单元格各类型值，返回字符串类型
     public static String getCellValueByCell(Cell cell) {

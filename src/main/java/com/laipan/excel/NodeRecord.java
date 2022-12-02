@@ -12,8 +12,6 @@ import lombok.Data;
 @Data
 public class NodeRecord {
 
-    private int ord;
-    private String expenseType;
     private String courseCode;
     private String courseName;
     private String courseType;
