@@ -14,12 +14,12 @@ import java.util.List;
 @Data
 public class TreeNode {
 
-    private TreeNode parent;
     private int depth;
     private int lft;
     private int rgt;
     private int rowNo;
     private int startCol;
+    private int SameDepthNextNodeRowNo;
 
     private int childNodeNum;
     private int ord;
